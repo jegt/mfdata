@@ -1,8 +1,12 @@
-load 'data.rb'
+require_relative 'data'
 
 class Status
 
   def self.get(characters)
+
+    puts ""
+    puts "STATUS:"
+    
     characters.each do |c|
 
       messages = []
@@ -31,7 +35,6 @@ class Status
     return nil
   end
 end
-
 
 if(ARGV.size > 0)
   characters = MfData.new.get(ARGV[0], ARGV[1])

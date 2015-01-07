@@ -24,6 +24,7 @@ class MfData
 
    def login(username, password)
      @agent = Mechanize.new
+     puts "Loggin in..."
      @page = @agent.get('http://mightandfealty.com/en/login')
 
      login = @page.forms.first
@@ -39,6 +40,7 @@ class MfData
 
    def each_character
 
+     puts "Listing characters..."
      @page = @agent.get('http://mightandfealty.com/en/account/characters')
 
      return @page.links.select{|l| l.to_s == "Play" }.map  do |l|
@@ -56,6 +58,8 @@ class MfData
 
     character = @page.search(".//div[@id='identity']//a[@class='link_character']").first.children.first.to_s
     settlement = @page.search(".//div[@id='identity']//a").last.children.first.to_s
+
+    puts "#{character} in #{settlement}..."
 
     {name: character, settlement: settlement}
 
@@ -144,4 +148,10 @@ class MfData
   end
 
 
+end
+
+if(__FILE__ == 'data.rb' && ARGV.size > 0)
+  puts "Downloading data..."
+  characters = MfData.new.get(ARGV[0], ARGV[1])
+  pp characters
 end
