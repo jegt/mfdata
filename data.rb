@@ -145,9 +145,3 @@ class MfData
 
 
 end
-
-if(ARGV.size > 0)
-  characters = MfData.new.get(ARGV[0], ARGV[1])
-  pp characters
-  #JSON.pretty_print(characters)
-end
