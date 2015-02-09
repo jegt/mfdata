@@ -1,5 +1,5 @@
 
-Requirements: mechanize and json
+Requirements: mechanize, hirb and json
 
 Example:
 

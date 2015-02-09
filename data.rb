@@ -4,7 +4,7 @@ require 'json'
 
 class MfData
 
-
+  attr_accessor :agent,:page
 
    def get(username, password)
      login(username, password) do
@@ -14,7 +14,8 @@ class MfData
          {
            character: character_info,
            buildings: buildings,
-           troops: troops
+           troops: troops,
+           estates: estates
          }
 
        end
@@ -24,6 +25,9 @@ class MfData
 
    def login(username, password)
      @agent = Mechanize.new
+     @agent.ignore_bad_chunking = true
+     @agent.keep_alive = false
+     
      puts "Loggin in..."
      @page = @agent.get('http://mightandfealty.com/en/login')
 
@@ -34,7 +38,31 @@ class MfData
 
      @page = @agent.submit(login)
 
-     yield
+     yield(self)
+
+   end
+
+   def character(name)
+     puts "Listing characters..."
+     @page = @agent.get('http://mightandfealty.com/en/account/characters')
+
+     play = nil
+     table = @page.search(".//div[@class='maincontent']//table").first
+     table.search(".//tr").each do |tr|
+       tds = tr.search(".//td")
+       if(tds.size == 8 && tds[1].text.strip == name.strip)
+         play = tds.last.search(".//a").first.attributes['href'].value
+         break
+       end
+     end
+
+     if(play)
+       url = "http://mightandfealty.com#{play}"
+       @page = @agent.get(url)
+       yield(self)
+     else
+       raise "No character found with name #{name}"
+     end
 
    end
 
@@ -48,7 +76,7 @@ class MfData
        url = "http://mightandfealty.com#{l.uri}"
        @page = @agent.get(url)
 
-       yield
+       yield(self)
 
      end
 
@@ -122,8 +150,9 @@ class MfData
       list.search(".//tr").each do |tr|
         equipment = tr.search(".//a[@class='link_equipment']").map{|l| l.text}
         name = tr.search(".//td").first.text
+        troop_id = tr.search(".//td/a").last.attributes['href'].value.split('/').last.to_i
 
-        data[:ready] << {name: name, equipment: equipment}
+        data[:ready] << {id: troop_id, name: name, equipment: equipment}
       end
 
 
@@ -147,6 +176,58 @@ class MfData
     return data
   end
 
+
+  def soldiers
+    count = 0
+    @page = @agent.get("http://mightandfealty.com/en/character/soldiers")
+
+    troop_segments = @page.search("//tbody")
+
+    list = troop_segments.first
+    data = []
+    list.search(".//tr").each do |tr|
+      equipment = tr.search(".//a[@class='link_equipment']").map{|l| l.text}
+      name = tr.search(".//td").first.text
+      troop_id = tr.search(".//td/a").last.attributes['href'].value.split('/').last.to_i
+
+      data << {id: troop_id, name: name, equipment: equipment}
+    end
+
+    return data
+  end
+
+
+  def estates
+    estates = @agent.page.link_with(:text => /estate/)
+    data = []
+
+    if(estates)
+      @page = estates.click
+
+      data = @page.search(".//table[@id='estates']//tbody//tr").map do |tr|
+        name = tr.search(".//a").first.text
+        tds = tr.search(".//td")
+        size = tds[3].text
+        population = tds[4].text.to_i
+        development = tds[5].text.strip
+        militia = tds[6].text.to_i
+        recruits = tds[7].text.to_i
+        constructing = tds[8].text.lines.map {|b| b.strip}.select{|b| b.size > 0}
+        {
+          name: name,
+          size: size,
+          population: population,
+          development: development,
+          militia: militia,
+          recruits: recruits,
+          constructing: constructing
+        }
+      end
+
+    end
+
+    return data
+  end
 
 end
 
